@@ -19,11 +19,13 @@ proc printTable(list: seq[seq[string]]) =
   table.echoTableSeps(80, boxSeps)
 
 type RepoId = enum
+  all = ""
   main
   community
   testing
 
 type ArchId = enum
+  all = ""
   x86_64
   x86
   aarch64
@@ -34,13 +36,20 @@ type ArchId = enum
   riscv64
 
 type PageNo = 1 .. int.high()
+
 type SearchParam = object
   page: PageNo = PageNo.low()
   name: string = ""
   branch: string = "edge"
-  repo: RepoId = main
-  arch: ArchId = x86_64
+  repo: RepoId = all
+  arch: ArchId = all
   maintainer: string = ""
+
+type DownloadParam = object
+  outfile: string
+  name: string
+  repo: RepoId
+  arch: ArchId
 
 type PkgInfo = object
   name: string
@@ -86,7 +95,7 @@ proc parsePkg(html: string): seq[PkgInfo] =
 
 func getDownloadUrl(pkg: PkgInfo): Uri =
   result =
-    fmt"http://dl-cdn.alpinelinux.org/alpine/latest-stable/{pkg.repo}/{pkg.arch}/{pkg.name}-{pkg.version}.apk".parseUri()
+    parseUri fmt"http://dl-cdn.alpinelinux.org/alpine/{pkg.branch}/{pkg.repo}/{pkg.arch}/{pkg.name}-{pkg.version}.apk"
 
 proc searchPkg(param: SearchParam): seq[PkgInfo] =
   let queryString = param.toQueryString()
@@ -94,15 +103,33 @@ proc searchPkg(param: SearchParam): seq[PkgInfo] =
   let html = fetch url
   result = parsePkg html
 
-proc downloadPkg(pkg: PkgInfo; to: string) =
-  pkg.getDownloadUrl().download(to)
-
 proc printPkg(pkgList: openArray[PkgInfo]) =
-  var list = newSeq[seq[string]](pkgList.len())
+  var list = newSeq[seq[string]](pkgList.len() + 1)
+  list[0] = @["name", "version", "repo", "arch", "buildDate"]
   for i, pkg in pkgList.pairs():
-    for _, v in pkg.fieldPairs():
-      list[i].add $v
+    for k, v in pkg.fieldPairs():
+      if k in list[0]:
+        list[i + 1].add $v
   printTable list
+
+proc validate(param: DownloadParam) =
+  if param.name == "":
+    raise newException(ValueError, "name is required")
+  if param.repo == all:
+    raise newException(ValueError, "repo is required")
+  if param.arch == all:
+    raise newException(ValueError, "arch is required")
+
+converter toSearchParam(param: DownloadParam): SearchParam =
+  result.name = param.name
+  result.repo = param.repo
+  result.arch = param.arch
+
+proc downloadPkg(pkg: PkgInfo; to: string) =
+  var outfile = to
+  if outfile == "":
+    outfile = fmt"./{pkg.name}-{pkg.version}-{pkg.arch}.apk"
+  download pkg.getDownloadUrl(), outfile
 
 proc printHelp() =
   echo """
@@ -111,53 +138,87 @@ proc printHelp() =
   Usage:
   apk_dl <command> [options]
  
-  Commmand:
+  Commmands:
   search
+  download
 
-  Common option:
+  Common options:
   --help
   --version
 
-  Search option:
+  Search options:
   --page=[1..] (default:1)
   --name=[keyword, wildcards: '?' '*'] (default:"")
-  --branch=[edge|v3.19] (default:edge)
-  --repo=[main|community|testing] （default:main)
-  --arch=[x86_64|x86|aarch64|armhf|ppc64le|s390x|armv7|riscv64] (default:x86_64)
+  --repo=[main|community|testing] (default:"")
+  --arch=[x86_64|x86|aarch64|armhf|ppc64le|s390x|armv7|riscv64] (default:"")
+
+  Download options:
+  --name=[fullname] (Mandatory)
+  --repo=[main|community|testing] (Mandatory)
+  --arch=[x86_64|x86|aarch64|armhf|ppc64le|s390x|armv7|riscv64] (Mandatory)
   """
 
 type CommandId = enum
   notsupport
-  search
+  cmdSearch
+  cmdDownload
 
 type Command = object
   case id: CommandId
   of notsupport:
     discard
-  of search:
-    opts: SearchParam
+  of cmdSearch:
+    searchParam: SearchParam
+  of cmdDownload:
+    downloadParam: DownloadParam
 
 proc run(command: Command) =
   case command.id
   of notsupport:
     printHelp()
     quit(0)
-  of search:
-    let pkgList = searchPkg command.opts
+  of cmdSearch:
+    let param: SearchParam = command.searchParam
+    echo "searching..." & $param
+    let pkgList = searchPkg param
     printPkg pkgList
+  of cmdDownload:
+    let param: DownloadParam = command.downloadParam
+    validate param
+    let pkgList = searchPkg param
+    if pkgList.len() == 1:
+      let pkg = pkgList[0]
+      echo "downloading..." & $(pkg.getDownloadUrl())
+      downloadPkg pkg, param.outfile
+      echo "download finished!"
+    else:
+      echo "can not download since multiple packages matched"
+      printPkg pkgList
 
-proc parseOpts(searchParam: var SearchParam; p: var OptParser) =
-  case p.key
-  of "page":
-    searchParam.page = p.val.parseInt()
-  of "name":
-    searchParam.name = p.val
-  of "branch":
-    searchParam.branch = p.val
-  of "repo":
-    searchParam.repo = parseEnum[RepoId](p.val)
-  of "arch":
-    searchParam.arch = parseEnum[ArchId](p.val)
+proc parseOpts(command: var Command; p: var OptParser) =
+  case command.id
+  of cmdSearch:
+    case p.key
+    of "page":
+      command.searchParam.page = p.val.parseInt()
+    of "name":
+      command.searchParam.name = p.val
+    of "repo":
+      command.searchParam.repo = parseEnum[RepoId](p.val)
+    of "arch":
+      command.searchParam.arch = parseEnum[ArchId](p.val)
+    else:
+      discard
+  of cmdDownload:
+    case p.key
+    of "name":
+      command.downloadParam.name = p.val
+    of "repo":
+      command.downloadParam.repo = parseEnum[RepoId](p.val)
+    of "arch":
+      command.downloadParam.arch = parseEnum[ArchId](p.val)
+    else:
+      discard
   else:
     discard
 
@@ -168,11 +229,13 @@ proc main() =
     printHelp()
     quit(0)
 
-  # 解析命令 
+  # 解析命令
   var command: Command =
     case cmdParams[0]
     of "search":
-      Command(id: search, opts: SearchParam())
+      Command(id: cmdSearch, searchParam: SearchParam())
+    of "download":
+      Command(id: cmdDownload, downloadParam: DownloadParam())
     else:
       Command(id: notsupport)
 
@@ -183,7 +246,7 @@ proc main() =
     case p.kind
     of cmdEnd:
       break
-    of cmdLongOption:
+    of cmdShortOption, cmdLongOption:
       case p.key
       # 通用选项
       of "help":
@@ -191,11 +254,7 @@ proc main() =
         quit(0)
       # 命令选项
       else:
-        case command.id
-        of search:
-          command.opts.parseOpts(p)
-        else:
-          discard
+        command.parseOpts(p)
     else:
       discard
 
