@@ -11,6 +11,3 @@ bin = @["apk_dl"]
 # Dependencies
 
 requires "nim >= 2.0.2", "puppy", "nancy"
-
-task build, "build app":
-  exec """nimble build -d:release"""
