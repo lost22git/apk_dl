@@ -2,6 +2,8 @@ import std/[uri]
 import puppy
 import nancy
 
+template option*() {.pragma.}
+
 func fetch*(url: Uri): string =
   result = fetch($url)
 

@@ -1,6 +1,6 @@
-import ./[domain]
-import std/[strutils]
+import ./[domain, util]
 import std/[parseopt]
+import std/[macros]
 
 proc printHelp*() =
   echo """
@@ -77,28 +77,16 @@ func parseCommand*(command: string): Command =
       Command(id: notsupport)
 
 proc parseOpts*(command: var Command; p: var OptParser) =
+  template parse(param: typed) =
+    for k, v in param.fieldPairs():
+      when v.hasCustomPragma(option):
+        if k == p.key:
+          v = p.val
+
   case command.id
   of cmdSearch:
-    case p.key
-    of "page":
-      command.searchParam.page = p.val.parseInt()
-    of "name":
-      command.searchParam.name = p.val
-    of "repo":
-      command.searchParam.repo = parseEnum[RepoId](p.val)
-    of "arch":
-      command.searchParam.arch = parseEnum[ArchId](p.val)
-    else:
-      discard
+    parse command.searchParam
   of cmdDownload:
-    case p.key
-    of "name":
-      command.downloadParam.name = p.val
-    of "repo":
-      command.downloadParam.repo = parseEnum[RepoId](p.val)
-    of "arch":
-      command.downloadParam.arch = parseEnum[ArchId](p.val)
-    else:
-      discard
+    parse command.downloadParam
   else:
     discard

@@ -20,21 +20,30 @@ type ArchId* = enum
   armv7
   riscv64
 
-type PageNo* = 1 .. int.high()
+converter toArchId*(str: string): ArchId =
+  result = parseEnum[ArchId](str)
+
+converter toRepoId*(str: string): RepoId =
+  result = parseEnum[RepoId](str)
+
+type PageId* = 1 .. int.high()
+
+converter toPageId*(str: string): PageId =
+  result = PageId(str.parseInt())
 
 type SearchParam* = object
-  page*: PageNo = PageNo.low()
-  name*: string = ""
+  page* {.option.}: PageId = PageId.low()
+  name* {.option.}: string = ""
   branch*: string = "edge"
-  repo*: RepoId = all
-  arch*: ArchId = all
+  repo* {.option.}: RepoId = all
+  arch* {.option.}: ArchId = all
   maintainer*: string = ""
 
 type DownloadParam* = object
-  outfile*: string
-  name*: string
-  repo*: RepoId
-  arch*: ArchId
+  outfile* {.option.}: string
+  name* {.option.}: string
+  repo* {.option.}: RepoId
+  arch* {.option.}: ArchId
 
 type PkgInfo* = object
   name*: string
@@ -53,7 +62,7 @@ func nextPage(param: sink SearchParam): SearchParam =
 
 func prevPage(param: sink SearchParam): SearchParam =
   result = param
-  if param.page > PageNo.low():
+  if param.page > PageId.low():
     param.page.dec()
 
 func toQueryString(param: SearchParam): string =
@@ -72,8 +81,8 @@ proc parsePkg(html: string): seq[PkgInfo] =
         project: tdList[2].findAll("a")[0].attr("href"),
         license: tdList[3].innerText().strip(),
         branch: tdList[4].innerText().strip(),
-        repo: parseEnum[RepoId](tdList[5].findAll("a")[0].innerText().strip()),
-        arch: parseEnum[ArchId](tdList[6].findAll("a")[0].innerText().strip()),
+        repo: tdList[5].findAll("a")[0].innerText().strip(),
+        arch: tdList[6].findAll("a")[0].innerText().strip(),
         maintainer: tdList[7].findAll("a")[0].innerText().strip(),
         buildDate: tdList[8].innerText().strip(),
       )
