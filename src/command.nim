@@ -82,6 +82,7 @@ proc parseOpts*(command: var Command; p: var OptParser) =
       when v.hasCustomPragma(option):
         if k == p.key:
           v = p.val
+          break
 
   case command.id
   of cmdSearch:
