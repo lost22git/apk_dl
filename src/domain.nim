@@ -3,22 +3,24 @@ import std/[strformat, strutils]
 import std/[typetraits]
 import std/[uri, htmlparser, xmltree]
 
-type RepoId* = enum
-  all = ""
-  main
-  community
-  testing
+type
+  RepoId* = enum
+    all = ""
+    main
+    community
+    testing
 
-type ArchId* = enum
-  all = ""
-  x86_64
-  x86
-  aarch64
-  armhf
-  ppc64le
-  s390x
-  armv7
-  riscv64
+type
+  ArchId* = enum
+    all = ""
+    x86_64
+    x86
+    aarch64
+    armhf
+    ppc64le
+    s390x
+    armv7
+    riscv64
 
 converter toArchId*(str: string): ArchId =
   result = parseEnum[ArchId](str)
@@ -26,35 +28,38 @@ converter toArchId*(str: string): ArchId =
 converter toRepoId*(str: string): RepoId =
   result = parseEnum[RepoId](str)
 
-type PageId* = 1 .. int.high()
+type PageId* = 1..int.high()
 
 converter toPageId*(str: string): PageId =
   result = PageId(str.parseInt())
 
-type SearchParam* = object
-  page* {.option.}: PageId = PageId.low()
-  name* {.option.}: string = ""
-  branch*: string = "edge"
-  repo* {.option.}: RepoId = all
-  arch* {.option.}: ArchId = all
-  maintainer*: string = ""
+type
+  SearchParam* = object
+    page* {.option.}: PageId = PageId.low()
+    name* {.option.}: string = ""
+    branch*: string = "edge"
+    repo* {.option.}: RepoId = all
+    arch* {.option.}: ArchId = all
+    maintainer*: string = ""
 
-type DownloadParam* = object
-  outfile* {.option.}: string
-  name* {.option.}: string
-  repo* {.option.}: RepoId
-  arch* {.option.}: ArchId
+type
+  DownloadParam* = object
+    outfile* {.option.}: string
+    name* {.option.}: string
+    repo* {.option.}: RepoId
+    arch* {.option.}: ArchId
 
-type PkgInfo* = object
-  name*: string
-  version*: string
-  project*: string
-  license*: string
-  branch*: string
-  repo*: RepoId
-  arch*: ArchId
-  maintainer*: string
-  buildDate*: string
+type
+  PkgInfo* = object
+    name*: string
+    version*: string
+    project*: string
+    license*: string
+    branch*: string
+    repo*: RepoId
+    arch*: ArchId
+    maintainer*: string
+    buildDate*: string
 
 func nextPage(param: sink SearchParam): SearchParam =
   result = param
@@ -76,16 +81,16 @@ proc parsePkg(html: string): seq[PkgInfo] =
   for tr in tbody.findAll("tr"):
     let tdList = tr.findAll("td")
     result.add PkgInfo(
-        name: tdList[0].findAll("a")[0].innerText().strip(),
-        version: tdList[1].findAll("a")[0].innerText().strip(),
-        project: tdList[2].findAll("a")[0].attr("href"),
-        license: tdList[3].innerText().strip(),
-        branch: tdList[4].innerText().strip(),
-        repo: tdList[5].findAll("a")[0].innerText().strip(),
-        arch: tdList[6].findAll("a")[0].innerText().strip(),
-        maintainer: tdList[7].findAll("a")[0].innerText().strip(),
-        buildDate: tdList[8].innerText().strip(),
-      )
+      name: tdList[0].findAll("a")[0].innerText().strip(),
+      version: tdList[1].findAll("a")[0].innerText().strip(),
+      project: tdList[2].findAll("a")[0].attr("href"),
+      license: tdList[3].innerText().strip(),
+      branch: tdList[4].innerText().strip(),
+      repo: tdList[5].findAll("a")[0].innerText().strip(),
+      arch: tdList[6].findAll("a")[0].innerText().strip(),
+      maintainer: tdList[7].findAll("a")[0].innerText().strip(),
+      buildDate: tdList[8].innerText().strip(),
+    )
 
 func getDownloadUrl*(pkg: PkgInfo): Uri =
   result =
@@ -119,7 +124,7 @@ converter toSearchParam*(param: DownloadParam): SearchParam =
   result.repo = param.repo
   result.arch = param.arch
 
-proc downloadPkg*(pkg: PkgInfo; to: string) =
+proc downloadPkg*(pkg: PkgInfo, to: string) =
   var outfile = to
   if outfile == "":
     outfile = fmt"./{pkg.name}-{pkg.version}-{pkg.arch}.apk"

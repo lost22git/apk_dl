@@ -29,19 +29,21 @@ proc printHelp*() =
   --arch=[x86_64|x86|aarch64|armhf|ppc64le|s390x|armv7|riscv64] (Mandatory)
   """
 
-type CommandId* = enum
-  notsupport
-  cmdSearch
-  cmdDownload
+type
+  CommandId* = enum
+    notsupport
+    cmdSearch
+    cmdDownload
 
-type Command* = object
-  case id*: CommandId
-  of notsupport:
-    discard
-  of cmdSearch:
-    searchParam*: SearchParam
-  of cmdDownload:
-    downloadParam*: DownloadParam
+type
+  Command* = object
+    case id*: CommandId
+    of notsupport:
+      discard
+    of cmdSearch:
+      searchParam*: SearchParam
+    of cmdDownload:
+      downloadParam*: DownloadParam
 
 proc run*(command: Command) =
   case command.id
@@ -76,7 +78,7 @@ func parseCommand*(command: string): Command =
     else:
       Command(id: notsupport)
 
-proc parseOpts*(command: var Command; p: var OptParser) =
+proc parseOpts*(command: var Command, p: var OptParser) =
   template parse(param: typed) =
     for k, v in param.fieldPairs():
       when v.hasCustomPragma(option):

@@ -7,7 +7,7 @@ template option*() {.pragma.}
 func fetch*(url: Uri): string =
   result = fetch($url)
 
-proc download*(url: Uri; to: string) =
+proc download*(url: Uri, to: string) =
   let content = fetch($url)
   writeFile(to, content)
 
