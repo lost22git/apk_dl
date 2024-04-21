@@ -13,4 +13,4 @@ bin = @["apk_dl"]
 requires "nim >= 2.0.2", "puppy", "nancy"
 
 task bfast, "build fast binary":
-  exec "nimble build -d:release --opt:speed --passL:-s --verbose"
+  exec "nimble build -d:release --opt:speed -d:strip --verbose"
