@@ -5,7 +5,7 @@ author = "lost22git"
 description = "alpine package downloader cli"
 license = "MIT"
 srcDir = "src"
-binDir = "target"
+binDir = "bin"
 bin = @["apk_dl"]
 
 # Dependencies

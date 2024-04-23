@@ -7,43 +7,41 @@ proc printHelp*() =
   Search alpine linux packages
 
   Usage:
-  apk_dl <command> [options]
+    apk_dl <command> [options]
  
   Commmands:
-  search
-  download
+    search
+    download
 
   Common options:
-  --help
-  --version
+    --help
+    --version
 
   Search options:
-  --page=[1..] (default:1)
-  --name=[keyword, wildcards: '?' '*'] (default:"")
-  --repo=[main|community|testing] (default:"")
-  --arch=[x86_64|x86|aarch64|armhf|ppc64le|s390x|armv7|riscv64] (default:"")
+    --page=[1..] (default:1)
+    --name=[keyword, wildcards: '?' '*'] (default:"")
+    --repo=[main|community|testing] (default:"")
+    --arch=[x86_64|x86|aarch64|armhf|ppc64le|s390x|armv7|riscv64] (default:"")
 
   Download options:
-  --name=[fullname] (Mandatory)
-  --repo=[main|community|testing] (Mandatory)
-  --arch=[x86_64|x86|aarch64|armhf|ppc64le|s390x|armv7|riscv64] (Mandatory)
+    --name=[fullname] (Mandatory)
+    --repo=[main|community|testing] (Mandatory)
+    --arch=[x86_64|x86|aarch64|armhf|ppc64le|s390x|armv7|riscv64] (Mandatory)
   """
 
-type
-  CommandId* = enum
-    notsupport
-    cmdSearch
-    cmdDownload
+type CommandId* = enum
+  notsupport
+  cmdSearch
+  cmdDownload
 
-type
-  Command* = object
-    case id*: CommandId
-    of notsupport:
-      discard
-    of cmdSearch:
-      searchParam*: SearchParam
-    of cmdDownload:
-      downloadParam*: DownloadParam
+type Command* = object
+  case id*: CommandId
+  of notsupport:
+    discard
+  of cmdSearch:
+    searchParam*: SearchParam
+  of cmdDownload:
+    downloadParam*: DownloadParam
 
 proc run*(command: Command) =
   case command.id
